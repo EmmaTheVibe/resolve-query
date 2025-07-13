@@ -15,16 +15,14 @@ const RangeAdjustmentComponent = React.memo(
     setUser2Ranges,
     user1Candidates,
     user2Candidates,
-    handleNumberInput, // Assuming this helper function is passed from a parent
-    handleKeyPress, // Assuming this helper function is passed from a parent
+    handleNumberInput,
+    handleKeyPress,
   }) => {
-    // State for temporary edits, localized to this component
-    const [tempUser1Start, setTempUser1Start] = useState(""); // Start with empty string
-    const [tempUser1End, setTempUser1End] = useState(""); // Start with empty string
-    const [tempUser2Start, setTempUser2Start] = useState(""); // Start with empty string
-    const [tempUser2End, setTempUser2End] = useState(""); // Start with empty string
+    const [tempUser1Start, setTempUser1Start] = useState("");
+    const [tempUser1End, setTempUser1End] = useState("");
+    const [tempUser2Start, setTempUser2Start] = useState("");
+    const [tempUser2End, setTempUser2End] = useState("");
 
-    // State to track validation errors locally
     const [overlapError, setOverlapError] = useState(false);
     const [invalidRangeError, setInvalidRangeError] = useState(false);
     const [outOfBoundsError, setOutOfBoundsError] = useState(false);
@@ -33,86 +31,64 @@ const RangeAdjustmentComponent = React.memo(
       return ranges.map((range) => `${range.start}-${range.end}`).join(", ");
     }, []);
 
-    // Effect to reset temp values when entering edit mode, or update when external ranges change
     useEffect(() => {
       if (!isEditingRanges) {
-        // When NOT editing, keep temp values in sync with actual user ranges
         setTempUser1Start(user1Start);
         setTempUser1End(user1End);
         setTempUser2Start(user2Start);
         setTempUser2End(user2End);
-        // Clear errors when not editing
         setOverlapError(false);
         setInvalidRangeError(false);
         setOutOfBoundsError(false);
       } else {
-        // When ENTERING edit mode, clear the inputs
         setTempUser1Start("");
         setTempUser1End("");
         setTempUser2Start("");
         setTempUser2End("");
-        // Clear errors
         setOverlapError(false);
         setInvalidRangeError(false);
         setOutOfBoundsError(false);
       }
-    }, [isEditingRanges, user1Start, user1End, user2Start, user2End]); // Depend on external ranges and edit mode
+    }, [isEditingRanges, user1Start, user1End, user2Start, user2End]);
 
-    // Centralized validation logic
     const validateRanges = useCallback(() => {
-      // Ensure inputs are treated as numbers, default to 0 for validation purposes if empty
       const u1Start = tempUser1Start === "" ? 0 : parseInt(tempUser1Start, 10);
       const u1End = tempUser1End === "" ? 0 : parseInt(tempUser1End, 10);
       const u2Start = tempUser2Start === "" ? 0 : parseInt(tempUser2Start, 10);
       const u2End = tempUser2End === "" ? 0 : parseInt(tempUser2End, 10);
-
-      // Reset all errors at the start of validation
       setOverlapError(false);
       setInvalidRangeError(false);
       setOutOfBoundsError(false);
 
-      // Check if any required field is empty (only relevant when saving)
       if (
         tempUser1Start === "" ||
         tempUser1End === "" ||
         tempUser2Start === "" ||
         tempUser2End === ""
       ) {
-        // This case should ideally be prevented by the handleNumberInput or
-        // the save logic, but good to have a catch.
-        // For saving, we'll use a default of 1 if empty, as per your original logic.
-        // However, for real-time validation, empty inputs mean invalid.
-        return false; // Don't allow save with empty inputs
+        return false;
       }
 
-      // 1. Validate start <= end for each user
       if (u1Start > u1End || u2Start > u2End) {
         setInvalidRangeError(true);
         return false;
       }
 
-      // 2. Validate ranges within 1-100
       if (u1Start < 1 || u1End > 100 || u2Start < 1 || u2End > 100) {
         setOutOfBoundsError(true);
         return false;
       }
 
-      // 3. Validate no overlap
-      // A simple way to check for overlap is to see if one range starts before the other ends
-      // AND the other range starts before the first ends.
-      // Specifically, two ranges [A, B] and [C, D] overlap if A <= D AND C <= B.
       if (u1Start <= u2End && u2Start <= u1End) {
         setOverlapError(true);
         return false;
       }
 
-      return true; // All validations passed
+      return true;
     }, [tempUser1Start, tempUser1End, tempUser2Start, tempUser2End]);
 
-    // Effect to run validation whenever temp inputs change
     useEffect(() => {
       if (isEditingRanges) {
-        // Only validate actively when in editing mode
         validateRanges();
       }
     }, [
@@ -125,21 +101,16 @@ const RangeAdjustmentComponent = React.memo(
     ]);
 
     const handleSaveRanges = useCallback(() => {
-      // Use parsed integers, default to 1 if temp values are empty on save (as per original logic)
       const u1Start = tempUser1Start === "" ? 1 : parseInt(tempUser1Start, 10);
       const u1End = tempUser1End === "" ? 1 : parseInt(tempUser1End, 10);
       const u2Start = tempUser2Start === "" ? 1 : parseInt(tempUser2Start, 10);
       const u2End = tempUser2End === "" ? 1 : parseInt(tempUser2End, 10);
 
-      // Re-run validation just before saving to ensure latest state
       const isValid = validateRanges();
       if (!isValid) {
-        // If validation fails, don't proceed with save.
-        // Alerts are removed in favor of visual error messages.
         return;
       }
 
-      // Check for gaps
       const allRanges = [
         { start: u1Start, end: u1End },
         { start: u2Start, end: u2End },
@@ -154,12 +125,11 @@ const RangeAdjustmentComponent = React.memo(
               `There will be a gap in candidates ${gapStart}-${gapEnd}. Continue?`
             )
           ) {
-            return; // User cancelled due to gap
+            return;
           }
         }
       }
 
-      // If all checks pass, update actual ranges
       setUser1Ranges([{ start: u1Start, end: u1End }]);
       setUser2Ranges([{ start: u2Start, end: u2End }]);
 
@@ -172,17 +142,15 @@ const RangeAdjustmentComponent = React.memo(
       setUser1Ranges,
       setUser2Ranges,
       setIsEditingRanges,
-      validateRanges, // Include validateRanges in deps
+      validateRanges,
     ]);
 
     const handleCancelEdit = useCallback(() => {
-      // When cancelling, revert temp states to actual user states
       setTempUser1Start(user1Start);
       setTempUser1End(user1End);
       setTempUser2Start(user2Start);
       setTempUser2End(user2End);
       setIsEditingRanges(false);
-      // Clear any validation errors
       setOverlapError(false);
       setInvalidRangeError(false);
       setOutOfBoundsError(false);
